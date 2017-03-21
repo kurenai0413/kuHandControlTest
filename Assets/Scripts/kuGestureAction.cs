@@ -8,7 +8,7 @@ public class kuGestureAction : MonoBehaviour {
 
     public Text DebugText;
 
-    public float RotationSensitivity = 3.0f;
+    public float RotationSensitivity = 1.0f;
 
 	// Use this for initialization
 	void Start () {
