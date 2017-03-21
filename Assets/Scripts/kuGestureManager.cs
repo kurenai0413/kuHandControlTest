@@ -1,15 +1,18 @@
-﻿using System.Collections;
+﻿//#define Manipulation
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.VR.WSA.Input;
-using HoloToolkit.Unity;
 using UnityEngine.UI;
+
 
 public class kuGestureManager : Singleton<kuGestureManager> {
 
     public Text DebugText;
 
     public GameObject TargetObject;
+
 
     public GestureRecognizer NavigationRecognizer { get; private set; }
 
@@ -20,7 +23,11 @@ public class kuGestureManager : Singleton<kuGestureManager> {
 
     public bool IsNavigating { get; private set; }
 
+    public bool IsManipulating { get; private set; }
+
     public Vector3 NavigationPosition { get; private set; }
+
+    public Vector3 ManipulationPosition { get; private set; }
 
     // Use this for initialization
     void Start () {
@@ -31,6 +38,7 @@ public class kuGestureManager : Singleton<kuGestureManager> {
     {
         /* TODO: DEVELOPER CODING EXERCISE 2.b */
 
+#if (!Manipulation)
         // 2.b: Instantiate the NavigationRecognizer.
         NavigationRecognizer = new GestureRecognizer();
 
@@ -53,12 +61,27 @@ public class kuGestureManager : Singleton<kuGestureManager> {
         NavigationRecognizer.NavigationCanceledEvent += NavigationRecognizer_NavigationCanceledEvent;
 
         NavigationRecognizer.StartCapturingGestures();
+#else
+
+        ManipulationRecognizer = new GestureRecognizer();
+
+        ManipulationRecognizer.SetRecognizableGestures(GestureSettings.ManipulationTranslate);
+
+        ManipulationRecognizer.ManipulationStartedEvent += ManipulationRecognizer_ManipulationStartedEvent;
+        ManipulationRecognizer.ManipulationUpdatedEvent += ManipulationRecognizer_ManipulationUpdatedEvent;
+        ManipulationRecognizer.ManipulationCompletedEvent += ManipulationRecognizer_ManipulationCompletedEvent;
+        ManipulationRecognizer.ManipulationCanceledEvent += ManipulationRecognizer_ManipulationCanceledEvent;
+
+        ManipulationRecognizer.StartCapturingGestures();
 
         DebugText.text = "Start Capturing Gestures.";
+#endif
+
     }
 
     private void OnDestroy()
     {
+#if (!Manipulation)
         // 2.b: Unregister the Tapped and Navigation events on the NavigationRecognizer.
         NavigationRecognizer.TappedEvent -= NavigationRecognizer_TappedEvent;
 
@@ -66,6 +89,13 @@ public class kuGestureManager : Singleton<kuGestureManager> {
         NavigationRecognizer.NavigationUpdatedEvent -= NavigationRecognizer_NavigationUpdatedEvent;
         NavigationRecognizer.NavigationCompletedEvent -= NavigationRecognizer_NavigationCompletedEvent;
         NavigationRecognizer.NavigationCanceledEvent -= NavigationRecognizer_NavigationCanceledEvent;
+#else
+        // Place manipulation event unassignment code here.
+        ManipulationRecognizer.ManipulationStartedEvent -= ManipulationRecognizer_ManipulationStartedEvent;
+        ManipulationRecognizer.ManipulationUpdatedEvent -= ManipulationRecognizer_ManipulationUpdatedEvent;
+        ManipulationRecognizer.ManipulationCompletedEvent -= ManipulationRecognizer_ManipulationCompletedEvent;
+        ManipulationRecognizer.ManipulationCanceledEvent -= ManipulationRecognizer_ManipulationCanceledEvent;
+#endif
     }
 
     // Update is called once per frame
@@ -73,6 +103,7 @@ public class kuGestureManager : Singleton<kuGestureManager> {
 		
 	}
 
+#if (!Manipulation)
     private void NavigationRecognizer_TappedEvent(InteractionSourceKind source, int tapCount, Ray ray)
     {
         // Do something at the TargetObject
@@ -110,4 +141,39 @@ public class kuGestureManager : Singleton<kuGestureManager> {
         // 2.b: Set IsNavigating to be false.
         IsNavigating = false;
     }
+#else
+    private void ManipulationRecognizer_ManipulationStartedEvent(InteractionSourceKind source, Vector3 position, Ray headRay)
+    {
+        if (TargetObject != null)
+        {
+            IsManipulating = true;
+
+            ManipulationPosition = position;
+
+            TargetObject.SendMessageUpwards("PerformManipulationStart", position);
+        }      
+    }
+
+    private void ManipulationRecognizer_ManipulationUpdatedEvent(InteractionSourceKind source, Vector3 position, Ray headRay)
+    {
+        if (TargetObject != null)
+        {
+            IsManipulating = true;
+
+            ManipulationPosition = position;
+
+            TargetObject.SendMessageUpwards("PerformManipulationUpdate", position);
+        }
+    }
+
+    private void ManipulationRecognizer_ManipulationCompletedEvent(InteractionSourceKind source, Vector3 cumulativeDelta, Ray headRay)
+    {
+        IsManipulating = false;
+    }
+
+    private void ManipulationRecognizer_ManipulationCanceledEvent(InteractionSourceKind source, Vector3 cumulativeDelta, Ray headRay)
+    {
+        IsManipulating = false;
+    }
+#endif
 }
